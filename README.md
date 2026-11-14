@@ -13,11 +13,12 @@ OTel 统一可观测性方案（`bayjf/docs/tier0/OTel统一可观测性方案-2
 两者接入既有的 `tier0-net`，业务容器用服务名 `otel-collector:4317/4318` 上报；
 主机进程用 `http://127.0.0.1:4318`。
 
-## 仓库与状态（2026-11-15）
+## 仓库与状态（2026-11-15，含当日三源实测）
 
 - GitHub 远端：`github.com/bayernjf/observability`（**私有**，默认分支 main）。
 - 镜像：`otel/opentelemetry-collector-contrib:0.115.1` 已拉取并通过镜像内 `validate`（配置 exit 0）；
-  `grafana/tempo:2.6.1` 因体积较大，拉取受镜像源波动影响，**截至记录时仍未完成**。
+  `grafana/tempo:2.6.1` **仍未拉取**——2026-11-15 实测三个源均失败：默认 daocloud mirror 卡死在
+  同名层（零写入）、`docker.1ms.run` 同样卡死、`docker.xuanyuan.me` 返回「免费节点当前繁忙」。
 - 容器尚未启动；Tempo 镜像就绪后执行下面的启动命令即可，无需改配置。
 
 ## 启动（需镜像源可用）
