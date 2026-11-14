@@ -36,7 +36,7 @@ docker compose up -d          # 起 otel-collector + tempo（镜像已在本地�
 
 停止：`docker compose down`（保留数据）；清空：`docker compose down -v`。
 
-## 镜像拉取受阻时的 fallback（2026-11-15 起在用）
+## 镜像拉取受阻时的 fallback（备用，非默认）
 
 若 `grafana/tempo` 镜像无法拉取，用官方 darwin/arm64 二进制在宿主机跑 Tempo：
 
@@ -59,8 +59,14 @@ cd ~/000mycodes/observability
 
 ## 后续阶段（本目录之外）
 
-- 阶段 2：抽 `@tier0/observability` TS 包，env opt-in（`OTEL_EXPORTER_OTLP_ENDPOINT`
-  空=不初始化），先接 zeus（复用既有 span 映射）与 agent-world。
+- 阶段 2（**2026-11-15 已完成**）：单仓独立架构下不抽共享包（`~/000mycodes` 无
+  monorepo 根、无 `packages/` 共享目录），改为**各仓内联 + 统一 env 契约**
+  （`OTEL_EXPORTER_OTLP_ENDPOINT` 空=不初始化、`OTEL_SERVICE_NAME`、
+  `deployment.environment=local`）。zeus 走既有 `OtlpTraceExporter`（G2 opt-in，
+  `ZEUS_OTLP_ENDPOINT`，并已加入 `ZEUS_OUTBOUND_ALLOW_HOSTS`）；agent-world 新增
+  `packages/server/src/observability/otlp.ts`，在 `/api/*` 中间件 fire-and-forget
+  导出请求 span。两者均已端到端验证：经 collector→tempo 可查回
+  `service.name=zeus` 与 `service.name=agent-world`。
 - 阶段 3：loom 用 Python OTel SDK，同样 env opt-in。
 - 阶段 4：agent-world prom-client 指标经 collector 收编。
 - 统一资源属性：`service.name` / 版本 / `deployment.environment=local`。
