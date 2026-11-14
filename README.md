@@ -16,21 +16,21 @@ OTel 统一可观测性方案（`bayjf/docs/tier0/OTel统一可观测性方案-2
 ## 仓库与状态（2026-11-15）
 
 - GitHub 远端：`github.com/bayernjf/observability`（**私有**，默认分支 main）。
-- 镜像：`otel/opentelemetry-collector-contrib:0.115.1` 已拉取并通过镜像内 `validate`（配置 exit 0）；
-  `grafana/tempo:2.6.1` **镜像仍未拉取**——2026-11-15 实测 7 个镜像源均失败（daocloud/1ms.run/dockerproxy
-  卡死在同名层零写入、xuanyuan 免费节点繁忙、nju 403、163 EOF、iscas 无该镜像）。
-- **fallback 已跑通并验收**：Tempo 官方 darwin/arm64 二进制在宿主机跑（4327 gRPC / 3200 查询），
-  collector 容器转发到 `host.docker.internal:4327`；`./smoke-test.sh` **PASS**
-  （trace `289311a73ecec2ae8e737f9dbbd3b88a`）。启动：`./start-local-fallback.sh`。
-- 镜像恢复后：删 fallback 容器、`docker compose up -d` 回到全容器方案（原 `tempo/tempo.yaml` /
-  `otel/collector-config.yaml` 未改动）。
+- **全容器方案已上线并通过冒烟（当前主用）**：`otel-collector` + `tempo` 两容器在
+  tier0-net 运行，`./smoke-test.sh` PASS（trace 经 collector 存入 Tempo 可查回）。
+  镜像：`otel/opentelemetry-collector-contrib:0.115.1`、`grafana/tempo:2.6.1`
+  （后者从 daocloud 拉取后 `docker tag` 为标准名）。
+- 配置注意：Tempo 2.6.1 的 compactor 只支持 `block_retention`，**不支持
+  `retention_concurrency`**（更高版本字段，写入会让容器启动崩溃），`tempo/tempo.yaml` 已修正。
+- **fallback（备用，非默认）**：`start-local-fallback.sh` 用主机 darwin/arm64 Tempo 二进制
+  + 临时 collector，仅在容器镜像完全拉不动时使用。它的 `otel-collector-local` 占用
+  127.0.0.1:4318，与全容器方案互斥；切换前先 `docker compose down` 并 `docker rm -f otel-collector-local`。
 
-## 启动（需镜像源可用）
+## 启动（当前主用：全容器）
 
 ```bash
 cd ~/000mycodes/observability
-docker compose pull           # 补齐 grafana/tempo:2.6.1
-docker compose up -d          # 起 otel-collector + tempo
+docker compose up -d          # 起 otel-collector + tempo（镜像已在本地）
 ./smoke-test.sh               # 阶段 1 验收：发一条 trace 并从 Tempo 读回
 ```
 

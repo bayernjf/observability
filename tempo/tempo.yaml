@@ -18,9 +18,10 @@ ingester:
   max_block_duration: 5m
 
 compactor:
+  # Tempo 2.6.1 supports block_retention only; retention_concurrency is a
+  # newer field and makes the container crash-loop on startup.
   compaction:
     block_retention: 168h          # 7 days; self-use trace window
-  retention_concurrency: 2
 
 storage:
   trace:
