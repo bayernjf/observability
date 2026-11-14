@@ -1,0 +1,32 @@
+# Tempo — host-binary fallback config (used when the grafana/tempo image
+# cannot be pulled; see README "镜像拉取受阻时的 fallback").
+#
+# Runs the official darwin/arm64 Tempo binary directly on the host instead of
+# in a container. Ports differ from tempo/tempo.yaml on purpose:
+#   - gRPC 4317 -> 4327  (collector container still publishes 4317 on host)
+#   - HTTP receiver removed (collector publishes 4318 on host)
+# Query API stays on 3200. Storage lives under tempo/data/ (gitignored).
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4327
+
+ingester:
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 168h
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: ./tempo/data/blocks
+    wal:
+      path: ./tempo/data/wal

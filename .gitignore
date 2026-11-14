@@ -1,2 +1,6 @@
 data/
 *.log
+# host-binary Tempo fallback (large binaries + local trace data)
+tempo/bin/
+tempo/data/
+tempo/tempo.log

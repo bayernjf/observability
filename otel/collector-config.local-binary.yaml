@@ -1,0 +1,37 @@
+# OTel collector config for the host-binary Tempo fallback.
+# Identical to otel/collector-config.yaml except the exporter targets the
+# host-binary Tempo at host.docker.internal:4327 (instead of tempo:4317).
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+  memory_limiter:
+    check_interval: 2s
+    limit_mib: 256
+    spike_limit_mib: 64
+
+exporters:
+  otlp/tempo:
+    endpoint: host.docker.internal:4327
+    tls:
+      insecure: true
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/tempo]
