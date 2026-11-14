@@ -1,0 +1,56 @@
+# Local observability stack (OTel plan 2026-11-14).
+#
+# Two containers on tier0-net:
+#   otel-collector  receives OTLP (4317 gRPC / 4318 HTTP), batches, forwards
+#   tempo           stores traces on a local named volume, serves query API:3200
+#
+# Only the collector's OTLP ports are published to the host (127.0.0.1), so
+# host processes and dockerized services alike can export, but nothing
+# listens on a public interface. No external network calls at steady state.
+#
+# Usage:
+#   docker compose up -d
+#   docker compose down            # stop, keep data
+#   docker compose down -v         # stop and wipe traces
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: 3
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    container_name: otel-collector
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel/collector-config.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "127.0.0.1:4318:4318"   # OTLP/HTTP for host SDKs
+      - "127.0.0.1:4317:4317"   # OTLP/gRPC for host SDKs
+    depends_on:
+      - tempo
+    networks: [tier0-net]
+    restart: unless-stopped
+    logging: *default-logging
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: tempo
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "127.0.0.1:3200:3200"   # Tempo query API, loopback only
+    networks: [tier0-net]
+    restart: unless-stopped
+    logging: *default-logging
+
+networks:
+  tier0-net:
+    external: true
+    name: tier0-net
+
+volumes:
+  tempo-data:

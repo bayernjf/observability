@@ -1,0 +1,43 @@
+# OTel collector — local-only observability pipeline (OTel plan phase 1).
+# Receives OTLP/HTTP from Tier0 services over tier0-net, batches, and exports
+# to the local Tempo container. No external dial-out: every endpoint below is
+# an in-network container name. Loopback/host processes reach it via the
+# published 127.0.0.1:4318 port.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+  # Local self-use: full sampling for now (plan D3). Keep the seam so a
+  # tail/head sampler can be dropped in without touching service configs.
+  memory_limiter:
+    check_interval: 2s
+    limit_mib: 256
+    spike_limit_mib: 64
+
+exporters:
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  # Fail-soft debug outlet: if Tempo is down, logs the spans instead of
+  # blocking. Services already treat export failures as non-fatal.
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/tempo]
