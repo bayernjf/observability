@@ -22,6 +22,11 @@ receivers:
           metrics_path: /metrics
           static_configs:
             - targets: ["backend:8000"]
+        - job_name: atlas
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["atlas:8000"]
 
 processors:
   batch:
