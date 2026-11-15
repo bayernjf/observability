@@ -67,6 +67,12 @@ cd ~/000mycodes/observability
   `packages/server/src/observability/otlp.ts`，在 `/api/*` 中间件 fire-and-forget
   导出请求 span。两者均已端到端验证：经 collector→tempo 可查回
   `service.name=zeus` 与 `service.name=agent-world`。
-- 阶段 3：loom 用 Python OTel SDK，同样 env opt-in。
+- 阶段 3（**2026-11-15 已完成**）：loom backend 接官方 Python OTel SDK（api /
+  sdk / exporter-otlp-proto-http，1.45.2），自写 ASGI 中间件（不引 instrumentation
+  全家桶），同样 env opt-in（`OTEL_EXPORTER_OTLP_ENDPOINT` 空=不初始化、
+  `OTEL_SERVICE_NAME` 默认 loom-backend、`deployment.environment=local`）。
+  `requirements.lock` 增 12 pin、既有 43 pin 零漂移。已端到端验证：中间件产出的
+  `GET /healthz` span 经 collector 落 tempo，可查回 `service.name=loom-backend`；
+  loom compose 已默认指向 tier0-net 的 collector（覆盖为空串即关闭）。
 - 阶段 4：agent-world prom-client 指标经 collector 收编。
 - 统一资源属性：`service.name` / 版本 / `deployment.environment=local`。
