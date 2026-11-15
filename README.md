@@ -74,5 +74,10 @@ cd ~/000mycodes/observability
   `requirements.lock` 增 12 pin、既有 43 pin 零漂移。已端到端验证：中间件产出的
   `GET /healthz` span 经 collector 落 tempo，可查回 `service.name=loom-backend`；
   loom compose 已默认指向 tier0-net 的 collector（覆盖为空串即关闭）。
-- 阶段 4：agent-world prom-client 指标经 collector 收编。
+- 阶段 4（**2026-11-15 已完成**）：agent-world 本就有 `/metrics`（Prometheus 文本格式，
+  自写 metrics.ts 输出 RED + run 成本指标），经 docker-compose.local.yml 已在 tier0-net。
+  collector 加 `prometheus` receiver scrape `agent-world:8791/metrics`，经 `prometheus`
+  exporter（:8889）转给 Prometheus（`prom/prometheus:3.16.0`，宿主 `127.0.0.1:9090`）。
+  端到端实证：Prometheus 可查到 `http_requests_total` 且 label 带
+  `exported_job="agent-world"`。当前 metrics 后端为 Prometheus，数据落本机 volume。
 - 统一资源属性：`service.name` / 版本 / `deployment.environment=local`。

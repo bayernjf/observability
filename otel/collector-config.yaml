@@ -34,6 +34,10 @@ exporters:
     endpoint: tempo:4317
     tls:
       insecure: true
+  # Prometheus exporter: re-serves the scraped metrics on 8889 for the
+  # Prometheus backend to scrape. Single metrics fan-out point.
+  prometheus:
+    endpoint: 0.0.0.0:8889
   # Fail-soft debug outlet: if Tempo is down, logs the spans instead of
   # blocking. Services already treat export failures as non-fatal.
   debug:
@@ -51,4 +55,4 @@ service:
     metrics:
       receivers: [prometheus]
       processors: [memory_limiter, batch]
-      exporters: [debug]
+      exporters: [prometheus, debug]
