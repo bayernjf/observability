@@ -1,0 +1,11 @@
+# Grafana notification policy (OTel plan 阶段 6) — file provisioning.
+# 默认路由：所有告警投递到 tier0-webhook 接触点，无分组、无静默。
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: tier0-webhook
+    group_by: ["alertname"]
+    group_wait: 10s
+    group_interval: 30s
+    repeat_interval: 1h

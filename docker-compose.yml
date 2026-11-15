@@ -74,6 +74,13 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
+      # Alert contact-point target (阶段 6). Default points at the local loopback
+      # fake receiver on the host; override with a real channel URL (飞书/微信/
+      # Slack bot) via a local .env. Grafana interpolates ${VAR} in the
+      # provisioning YAML from its own environment.
+      GRAFANA_ALERT_WEBHOOK_URL: ${GRAFANA_ALERT_WEBHOOK_URL:-http://host.docker.internal:9099}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:3001:3000"   # Grafana UI, loopback only (3000 taken by host)
     volumes:

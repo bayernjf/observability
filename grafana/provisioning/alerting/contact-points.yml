@@ -1,0 +1,16 @@
+# Grafana contact points (OTel plan 阶段 6) — file provisioning.
+# 单一 webhook 接收端，默认指向本地 fake receiver（loopback，验证告警投递链路）。
+# 接真实外部渠道（飞书/微信/Slack bot）时，把 url 换成真实地址即可；支持
+# $GRAFANA_ALERT_WEBHOOK_URL 环境变量插值覆盖。
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: tier0-webhook
+    receivers:
+      - uid: tier0-webhook-receiver
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          url: ${GRAFANA_ALERT_WEBHOOK_URL}
+          httpMethod: POST

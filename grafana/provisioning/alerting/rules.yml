@@ -1,0 +1,85 @@
+# Grafana alert rules (OTel plan 阶段 6) — file provisioning.
+# 基于 Prometheus 数据源（uid=prometheus）求值，覆盖本地 Tier0 栈最基础的
+# 可用性与错误告警。通知走 contact-points.yml 里定义的本地 webhook 接收端；
+# 真实外部渠道（飞书/微信/Slack）URL 属外部凭据，覆盖 GRAFANA_ALERT_WEBHOOK_URL 即可。
+#
+# 注意：data[].relativeTimeRange 是顶层必填字段（Grafana 11 校验 invalidRelativeTime），
+# from=300 表示规则评估回看 5m 的时间窗口。
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: tier0-availability
+    folder: Tier0 Alerts
+    interval: 30s
+    rules:
+      - uid: tier0-service-down
+        title: Tier0 服务不可达（agent-world）
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: up{exported_job="agent-world"} == 0
+              refId: A
+              instant: true
+              range: true
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "agent-world /metrics 抓取失败（up=0）"
+
+      - uid: tier0-http-errors-spike
+        title: agent-world 5xx 错误速率异常
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: (sum(rate(http_errors_total[5m])) or vector(0)) > 0.05
+              refId: A
+              instant: true
+              range: true
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "agent-world 5xx 速率超过 0.05/s"
+
+      - uid: tier0-run-failed-spike
+        title: agent-world Run 失败率异常
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: |
+                (
+                  (sum(rate(runs_failed_total[5m])) or vector(0))
+                  /
+                  clamp_min((sum(rate(runs_total[5m])) or vector(0)), 0.001)
+                ) > 0.5
+              refId: A
+              instant: true
+              range: true
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "agent-world 近 5 分钟 Run 失败占比超过 50%"
