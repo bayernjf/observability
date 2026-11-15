@@ -27,6 +27,18 @@ receivers:
           metrics_path: /metrics
           static_configs:
             - targets: ["atlas:8000"]
+        # zeus (phase 8): the decision runtime's own concurrency accounting,
+        # projected to Prometheus text by src/observability/prometheus.ts. Same
+        # snapshot as the bearer-only /api/metrics, so the dashboard and the
+        # operator deck can never disagree. No authorization block: zeus leaves
+        # ZEUS_METRICS_TOKEN unset on tier0-net and publishes only on loopback
+        # (127.0.0.1:18787). If that token is ever set, add
+        # `authorization: {credentials: ...}` here from an env var, not a literal.
+        - job_name: zeus
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["zeus:8787"]
 
 processors:
   batch:
