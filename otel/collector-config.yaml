@@ -10,6 +10,13 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: agent-world
+          scrape_interval: 15s
+          static_configs:
+            - targets: ["agent-world:8791"]
 
 processors:
   batch:
@@ -41,3 +48,7 @@ service:
       receivers: [otlp]
       processors: [memory_limiter, batch]
       exporters: [otlp/tempo]
+    metrics:
+      receivers: [prometheus]
+      processors: [memory_limiter, batch]
+      exporters: [debug]
