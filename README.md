@@ -114,4 +114,8 @@ cd ~/000mycodes/observability
   否则 `input data must be a wide series`；做法是最外层 `or vector(0)` 兜底。
   且 agent-world 不吐 `up` 指标，「服务不可达」用 `absent(<稳定指标>)` 检测而非
   `up==0`。最终三条规则 `health=ok`、`state=inactive`、`lastError=None`。
+- 阶段 7 看板增强（**2026-11-15 完成**）：「Tier0 可观测性总览」看板从 8 面板扩到
+  13 面板，按服务分区：agent-world（HTTP 速率/5xx/延迟/Run 累计+三个 stat）→
+  loom（HTTP 速率/延迟 P50·P90·P99）→ atlas（存活/活跃租户/Run 累计 stat）→
+  最近 Trace。三服务的指标现都能在同一个看板里看到。
 - 统一资源属性：`service.name` / 版本 / `deployment.environment=local`。
