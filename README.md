@@ -87,4 +87,16 @@ cd ~/000mycodes/observability
   （HTTP RED + run 计数/失败/成本/活跃 + 最近 trace）。loopback 绑 `127.0.0.1:3001`
   （宿主 3000 被占用），管理员口令默认可经 `GRAFANA_ADMIN_PASSWORD` 覆盖。
   访问 `http://127.0.0.1:3001`（admin / admin，或按 env 覆盖值）。
+- 阶段 6（**2026-11-15 完成**）：Grafana 内置告警（unified alerting，无需额外
+  Alertmanager 容器）。文件式置备三条规则（`grafana/provisioning/alerting/rules.yml`）：
+  ① agent-world `/metrics` 抓取失败（up=0，critical）② 5xx 速率异常（warning）
+  ③ Run 失败率异常（warning）。接触点（`contact-points.yml`）为单一 webhook，默认
+  指向本地 loopback 假接收端 `scripts/fake-alert-receiver.mjs`（:9099），真实外部渠道
+  （飞书/微信/Slack bot）通过 `GRAFANA_ALERT_WEBHOOK_URL` 环境变量覆盖 URL 即可，
+  规则无需改。通知策略（`policies.yml`）默认路由到该接触点。
+  端到端已实证：规则求值报错 → Grafana 发 `DatasourceError` 告警 → webhook →
+  fake receiver 收到 firing 告警。验证：`node scripts/fake-alert-receiver.mjs` 后
+  在 Grafana UI「Alerting」页看规则 firing，或直接看 receiver 日志。
+  注意：Grafana 11 的 alert rule `data[].relativeTimeRange` 是顶层必填字段
+  （缺了会 `invalidRelativeTime` 崩溃循环），`from: 300` 表示回看 5m 窗口。
 - 统一资源属性：`service.name` / 版本 / `deployment.environment=local`。
