@@ -99,4 +99,12 @@ cd ~/000mycodes/observability
   在 Grafana UI「Alerting」页看规则 firing，或直接看 receiver 日志。
   注意：Grafana 11 的 alert rule `data[].relativeTimeRange` 是顶层必填字段
   （缺了会 `invalidRelativeTime` 崩溃循环），`from: 300` 表示回看 5m 窗口。
+- 阶段 7（**2026-11-15 完成**）：loom backend 指标接入集中式栈。collector 的
+  prometheus receiver 增 `loom-backend` scrape 目标（`backend:8000/metrics`，loom
+  后端在 tier0-net 上的服务名是 `backend`）。loom 零依赖自写 Prometheus 文本
+  （`http_requests_total`/`http_request_duration_seconds`/`up` 等）现与 agent-world
+  并存于同一 Prometheus，靠 `exported_job` label 区分（agent-world 用 `_ms` 直方图、
+  loom 用 `_seconds` 直方图，命名不冲突）。已端到端验证：Prometheus 与 Grafana 代理
+  均可查到 `up{exported_job="loom-backend"}=1`。这是「集中式 Grafana 统一收编 Tier0
+  服务」的第 1 步；atlas 及其余服务按需跟进。
 - 统一资源属性：`service.name` / 版本 / `deployment.environment=local`。
