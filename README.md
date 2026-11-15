@@ -99,12 +99,19 @@ cd ~/000mycodes/observability
   在 Grafana UI「Alerting」页看规则 firing，或直接看 receiver 日志。
   注意：Grafana 11 的 alert rule `data[].relativeTimeRange` 是顶层必填字段
   （缺了会 `invalidRelativeTime` 崩溃循环），`from: 300` 表示回看 5m 窗口。
-- 阶段 7（**2026-11-15 完成**）：loom backend 指标接入集中式栈。collector 的
-  prometheus receiver 增 `loom-backend` scrape 目标（`backend:8000/metrics`，loom
-  后端在 tier0-net 上的服务名是 `backend`）。loom 零依赖自写 Prometheus 文本
-  （`http_requests_total`/`http_request_duration_seconds`/`up` 等）现与 agent-world
-  并存于同一 Prometheus，靠 `exported_job` label 区分（agent-world 用 `_ms` 直方图、
-  loom 用 `_seconds` 直方图，命名不冲突）。已端到端验证：Prometheus 与 Grafana 代理
-  均可查到 `up{exported_job="loom-backend"}=1`。这是「集中式 Grafana 统一收编 Tier0
-  服务」的第 1 步；atlas 及其余服务按需跟进。
+- 阶段 7（**2026-11-15 完成**）：loom backend 与 atlas 指标接入集中式栈。collector 的
+  prometheus receiver 增 `loom-backend`（`backend:8000/metrics`）与 `atlas`
+  （`atlas:8000/metrics`）两个 scrape 目标。三服务现并存于同一 Prometheus，靠
+  `exported_job` label 区分：agent-world（`runs_*`/`http_request_duration_ms`）、
+  loom（`http_request_duration_seconds`/`up`）、atlas（`atlas_*` 前缀全隔离）。
+  已端到端验证：`up{exported_job="loom-backend"}=1`、`atlas_up=1` 均可在 Prometheus
+  与 Grafana 代理查到。这是「集中式 Grafana 统一收编 Tier0 服务」的前两步；其余
+  服务（zeus/commerce-os/growth-os 等）按需跟进。
+- 阶段 7 附带修正（**告警规则求值修复**）：三服务接入后暴露了两处 Grafana 11 告警
+  规则的求值坑，均已修并记录：① `instant:true` 与 `range:true` 不能同设——同设会
+  `frame has wrong type, expected NumericMulti but got timeseries-multi`；alert 规则
+  只用 `instant:true`。② 空向量问题——表达式在「无告警」时须返回明确数值而非空向量，
+  否则 `input data must be a wide series`；做法是最外层 `or vector(0)` 兜底。
+  且 agent-world 不吐 `up` 指标，「服务不可达」用 `absent(<稳定指标>)` 检测而非
+  `up==0`。最终三条规则 `health=ok`、`state=inactive`、`lastError=None`。
 - 统一资源属性：`service.name` / 版本 / `deployment.environment=local`。
