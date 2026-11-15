@@ -1,0 +1,15 @@
+# Grafana 看板自动置备：文件式 provider，指向 /etc/grafana/dashboards 下的
+# JSON 看板。不建库、不进 UI 手工导入。
+apiVersion: 1
+
+providers:
+  - name: tier0
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: false

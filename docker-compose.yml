@@ -63,6 +63,30 @@ services:
     restart: unless-stopped
     logging: *default-logging
 
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    environment:
+      # Loopback-only self-use: no auth elsewhere in this stack, so keep the
+      # Grafana admin on an overridable default rather than a hard mandatory
+      # secret. Override via GRAFANA_ADMIN_PASSWORD in a local .env.
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    ports:
+      - "127.0.0.1:3001:3000"   # Grafana UI, loopback only (3000 taken by host)
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - tempo
+    networks: [tier0-net]
+    restart: unless-stopped
+    logging: *default-logging
+
 networks:
   tier0-net:
     external: true
@@ -71,3 +95,4 @@ networks:
 volumes:
   tempo-data:
   prometheus-data:
+  grafana-data:
