@@ -7,7 +7,7 @@ OTel 统一可观测性方案（`bayjf/docs/tier0/OTel统一可观测性方案-2
 
 | 容器 | 作用 | 端口（仅 127.0.0.1） |
 |---|---|---|
-| `otel-collector` | 收 OTLP（4317 gRPC / 4318 HTTP）、批处理、scrape agent-world 指标、转发 | 4317 / 4318 |
+| `otel-collector` | 收 OTLP（4317 gRPC / 4318 HTTP）、批处理、scrape 四个 Tier0 服务指标、转发 | 4317 / 4318 |
 | `tempo` | 本地 trace 存储（monolithic，磁盘卷 `tempo-data`，保留 7 天） | 3200 查询 API |
 | `prometheus` | 本地指标后端（scrape collector 的 exporter），磁盘卷 `prometheus-data` | 9090 |
 | `grafana` | 看板（数据源置备指向 Prometheus + Tempo），磁盘卷 `grafana-data` | 3001 |
@@ -118,4 +118,35 @@ cd ~/000mycodes/observability
   13 面板，按服务分区：agent-world（HTTP 速率/5xx/延迟/Run 累计+三个 stat）→
   loom（HTTP 速率/延迟 P50·P90·P99）→ atlas（存活/活跃租户/Run 累计 stat）→
   最近 Trace。三服务的指标现都能在同一个看板里看到。
+- 阶段 8（**2026-11-15 完成**）：zeus 决策运行时接入集中式栈。zeus 此前只有 bearer
+  保护的 `/api/metrics` JSON，没有 Prometheus 文本面，所以 collector 抓不到它——这是
+  它缺席看板的唯一技术原因。本阶段跨两仓：
+  - **zeus 仓**新增 `GET /metrics`（`src/observability/prometheus.ts`，纯投影、零 IO）：
+    把 `/api/metrics` 的同一份 `MetricsSnapshot` 渲染成 `zeus_*` 文本族，不新建第二条
+    记账路径，两个面因此不可能互相矛盾。挂在 `internalToken` 块之外，未配 operator
+    token 的进程照样报自身健康；鉴权用独立的可选 `ZEUS_METRICS_TOKEN`（抓取器不该
+    持有操作者凭证）。没有已结束调用的执行 Agent 只输出 `in_flight`，不输出延迟族
+    （0ms 的 p95 会被读成「极快」而不是「未知」）。
+  - **本仓** collector 增 `zeus`（`zeus:8787/metrics`）scrape 目标；看板增 zeus 分区
+    6 面板（存活 / 在途分支 / 排队·拒绝 / 分支终态与背压速率 / 每执行 Agent 失败率 /
+    派发与排队延迟 P95），13 → **19 面板**，最近 Trace 下移到 y58；「服务不可达」告警
+    增第四项 `count(absent(zeus_up))`。
+  - **已端到端现测**（不是配置推断）：`docker compose build zeus && up -d` 重建容器后
+    `curl 127.0.0.1:18787/metrics` → HTTP 200、`text/plain; version=0.0.4`、17 个族
+    （当时尚无已结束分支，执行 Agent 族按设计不输出）；
+    collector 日志 `Scrape job added {"jobName":"zeus"}`；Prometheus
+    `up{exported_job="zeus"}=1`；看板 13 个 zeus target 全部求值成功；Grafana
+    `/api/ds/query` 取回 `max(zeus_up)=1`。再经容器内 `POST /api/intents` 跑真意图
+    （两个执行 Agent 各 2 分支、4 分支 completed），Grafana 侧读回
+    `zeus_executor_latency_ms{stat="p95"}`：example-agent **35ms**、llm-agent
+    **26488ms**，`zeus_queue_wait_ms{stat="p95"}=10`。三条告警规则
+    `health=ok`、`state=inactive`、`lastError=""`。
+  - **本阶段踩到并修掉的坑**：`<裸指标> or vector(0)` 在指标存在时返回 **2 条**序列
+    （`vector(0)` 标签集为空，与带 `exported_job` 的左侧不匹配，`or` 不去重），stat
+    面板会同时显示「在线 1」和「离线 0」。必须先聚合再兜底：`max(zeus_up) or vector(0)`
+    / `sum(...) or vector(0)` → 1 条。正对照：把 `zeus_up` 换成不存在的指标名，
+    告警表达式从 `0` 变 `1`，证明新增项真的进了求和而不是装饰。既有 7 阶段的告警与
+    面板本来就用聚合形式，无此缺陷。
+  - 另记：Grafana **看板**置备每 10s 热加载（`updateIntervalSeconds: 10`），**告警规则**
+    置备不热加载，改 `rules.yml` 后必须 `docker compose restart grafana` 才生效。
 - 统一资源属性：`service.name` / 版本 / `deployment.environment=local`。
