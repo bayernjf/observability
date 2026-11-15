@@ -17,6 +17,11 @@ receivers:
           scrape_interval: 15s
           static_configs:
             - targets: ["agent-world:8791"]
+        - job_name: loom-backend
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["backend:8000"]
 
 processors:
   batch:
