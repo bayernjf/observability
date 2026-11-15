@@ -14,7 +14,7 @@ groups:
     interval: 30s
     rules:
       - uid: tier0-service-down
-        title: Tier0 服务不可达（agent-world）
+        title: Tier0 服务不可达（抓取失败）
         condition: A
         data:
           - refId: A
@@ -23,17 +23,38 @@ groups:
               from: 300
               to: 0
             model:
-              expr: up{exported_job="agent-world"} == 0
+              # agent-world 不吐 `up` 指标（无存活标记），loom/atlas 各自吐 `up`/`atlas_up`。
+              # 用 count() 兜底让表达式在「服务健康」时返回明确的 0 而非空向量
+              # （Grafana 11 对空向量的 instant 求值会报 "must be a wide series"）。
+              # >0 表示有服务抓取失败。
+              expr: |
+                (
+                  (
+                    count(absent(http_requests_total{exported_job="agent-world"}))
+                    or vector(0)
+                  )
+                  +
+                  (
+                    count(absent(up{exported_job="loom-backend"}))
+                    or vector(0)
+                  )
+                  +
+                  (
+                    count(absent(atlas_up))
+                    or vector(0)
+                  )
+                  > 0
+                )
+                or vector(0)
               refId: A
               instant: true
-              range: true
         noDataState: NoData
         execErrState: Error
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "agent-world /metrics 抓取失败（up=0）"
+          summary: "某个 Tier0 服务的 /metrics 抓取失败（指标消失）"
 
       - uid: tier0-http-errors-spike
         title: agent-world 5xx 错误速率异常
@@ -45,10 +66,9 @@ groups:
               from: 300
               to: 0
             model:
-              expr: (sum(rate(http_errors_total[5m])) or vector(0)) > 0.05
+              expr: ((sum(rate(http_errors_total[5m])) or vector(0)) > 0.05) or vector(0)
               refId: A
               instant: true
-              range: true
         noDataState: NoData
         execErrState: Error
         for: 2m
@@ -69,13 +89,14 @@ groups:
             model:
               expr: |
                 (
-                  (sum(rate(runs_failed_total[5m])) or vector(0))
-                  /
-                  clamp_min((sum(rate(runs_total[5m])) or vector(0)), 0.001)
-                ) > 0.5
+                  (
+                    (sum(rate(runs_failed_total[5m])) or vector(0))
+                    /
+                    clamp_min((sum(rate(runs_total[5m])) or vector(0)), 0.001)
+                  ) > 0.5
+                ) or vector(0)
               refId: A
               instant: true
-              range: true
         noDataState: NoData
         execErrState: Error
         for: 5m
