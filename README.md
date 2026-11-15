@@ -7,10 +7,12 @@ OTel 统一可观测性方案（`bayjf/docs/tier0/OTel统一可观测性方案-2
 
 | 容器 | 作用 | 端口（仅 127.0.0.1） |
 |---|---|---|
-| `otel-collector` | 收 OTLP（4317 gRPC / 4318 HTTP）、批处理、转发 | 4317 / 4318 |
+| `otel-collector` | 收 OTLP（4317 gRPC / 4318 HTTP）、批处理、scrape agent-world 指标、转发 | 4317 / 4318 |
 | `tempo` | 本地 trace 存储（monolithic，磁盘卷 `tempo-data`，保留 7 天） | 3200 查询 API |
+| `prometheus` | 本地指标后端（scrape collector 的 exporter），磁盘卷 `prometheus-data` | 9090 |
+| `grafana` | 看板（数据源置备指向 Prometheus + Tempo），磁盘卷 `grafana-data` | 3001 |
 
-两者接入既有的 `tier0-net`，业务容器用服务名 `otel-collector:4317/4318` 上报；
+全部容器接入既有的 `tier0-net`，业务容器用服务名 `otel-collector:4317/4318` 上报；
 主机进程用 `http://127.0.0.1:4318`。
 
 ## 仓库与状态（2026-11-15）
@@ -80,4 +82,9 @@ cd ~/000mycodes/observability
   exporter（:8889）转给 Prometheus（`prom/prometheus:3.16.0`，宿主 `127.0.0.1:9090`）。
   端到端实证：Prometheus 可查到 `http_requests_total` 且 label 带
   `exported_job="agent-world"`。当前 metrics 后端为 Prometheus，数据落本机 volume。
+- 阶段 5（**2026-11-15 完成**）：Grafana 看板。`grafana/grafana:11.4.0` 接
+  Prometheus（默认数据源）+ Tempo，文件式置备数据源与「Tier0 可观测性总览」看板
+  （HTTP RED + run 计数/失败/成本/活跃 + 最近 trace）。loopback 绑 `127.0.0.1:3001`
+  （宿主 3000 被占用），管理员口令默认可经 `GRAFANA_ADMIN_PASSWORD` 覆盖。
+  访问 `http://127.0.0.1:3001`（admin / admin，或按 env 覆盖值）。
 - 统一资源属性：`service.name` / 版本 / `deployment.environment=local`。
