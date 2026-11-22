@@ -39,6 +39,21 @@ receivers:
           metrics_path: /metrics
           static_configs:
             - targets: ["zeus:8787"]
+        # commerce-os (phase 9): aggregate operating metrics from the same
+        # dashboard snapshot that serves /api/v1/dashboard. No order rows or
+        # customer fields are exposed; the endpoint is loopback/tier0-net only.
+        - job_name: commerce-os
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["commerce-os:8787"]
+        # growth-os (phase 9): bounded CRM/outreach counts. Emails and message
+        # bodies never become labels.
+        - job_name: growth-os
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["growth-os:8788"]
 
 processors:
   batch:
