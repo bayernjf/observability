@@ -5,14 +5,22 @@
 > 本段是本产品唯一活跃待办入口；详细背景见下方原有章节。完成一项改 `[x]`，并在“最近变更 / Recently shipped”留证据。
 > 最近同步：2026-11-22
 
+<!-- tier0:todos v1 -->
+| id | title | status | priority | owner | next | evidence | updated |
+|---|---|---|---|---|---|---|---|
+| OB-01 | 其余 Tier0 服务指标接入 | open | p2 | self | agent-ops / growth-agent / model-hub / ops-console 等按需跟进 | `observability/handoff.md` | 2026-11-22 |
+| OB-02 | 真实告警渠道 | blocked | p1 | owner | owner 提供飞书/微信/Slack webhook，经 `GRAFANA_ALERT_WEBHOOK_URL` 覆盖 | - | 2026-11-22 |
+<!-- /tier0:todos -->
+
+### 已完成（历史）
+
 - [x] **commerce-os / growth-os 指标接入** — 2026-11-22 完成；两仓新增 `GET /metrics`，
   collector 增两个 scrape job，看板 19 → 26 面板，服务不可达告警增两项；已端到端现测。
-- [ ] **其余 Tier0 服务指标接入** — 状态：open；agent-ops / growth-agent / model-hub /
-      ops-console 等按需跟进。
-- [ ] **真实告警渠道** — 状态：blocked；飞书/微信/Slack bot URL 未定义，当前只到 `scripts/fake-alert-receiver.mjs`；外部确定后经 `GRAFANA_ALERT_WEBHOOK_URL` 覆盖。
 
 > 状态主入口。开工前先读；每完成一个工作单元立即更新（已完成划掉、待办保留）。
 > 组件/配置/启动细节以 `README.md` 为权威，本文件只记录交接信息（进度 + 下一步 + 阻塞）。
+
+
 ## Current state（2026-11-22）
 
 - **仓库**：git 私有 `github.com/bayernjf/observability`，默认分支 main。
