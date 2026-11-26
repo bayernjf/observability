@@ -61,6 +61,13 @@ receivers:
           metrics_path: /metrics
           static_configs:
             - targets: ["model-hub:8791"]
+        # growth-agent (phase 10): aggregate task/cost/webhook/failure counts.
+        # No task id, PR ref (repo URL), decision id or error text is exported.
+        - job_name: growth-agent
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["orchestrator:8790"]
 
 processors:
   batch:

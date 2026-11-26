@@ -64,6 +64,11 @@ groups:
                     count(absent(modelhub_up))
                     or vector(0)
                   )
+                  +
+                  (
+                    count(absent(growth_agent_up))
+                    or vector(0)
+                  )
                   > 0
                 )
                 or vector(0)
