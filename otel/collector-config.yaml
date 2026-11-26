@@ -54,6 +54,13 @@ receivers:
           metrics_path: /metrics
           static_configs:
             - targets: ["growth-os:8788"]
+        # model-hub (phase 10): aggregate usage counts by model + billing source.
+        # No prompt content, key material or project id becomes a label.
+        - job_name: model-hub
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["model-hub:8791"]
 
 processors:
   batch:
