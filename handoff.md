@@ -8,7 +8,7 @@
 <!-- tier0:todos v1 -->
 | id | title | status | priority | owner | next | evidence | updated |
 |---|---|---|---|---|---|---|---|
-| OB-01 | 其余 Tier0 服务指标接入 | open | p2 | self | agent-ops / growth-agent / model-hub / ops-console 等按需跟进 | `observability/handoff.md` | 2026-11-22 |
+| OB-01 | 其余 Tier0 服务指标接入 | open | p2 | self | model-hub 已接入；剩 growth-agent / ops-console / agent-ops 按需跟进 | `observability/handoff.md` | 2026-11-27 |
 | OB-02 | 真实告警渠道 | blocked | p1 | owner | owner 提供飞书/微信/Slack webhook，经 `GRAFANA_ALERT_WEBHOOK_URL` 覆盖 | - | 2026-11-22 |
 <!-- /tier0:todos -->
 
@@ -42,6 +42,9 @@
   看板 13 → 19 面板）；已端到端现测，非配置推断。
 - ✅ 阶段 9：commerce-os + growth-os 指标接入（两仓各新增 `GET /metrics`；
   看板 19 → 26 面板；服务不可达告警增加两项）；已端到端现测，非配置推断。
+- ⬜ 阶段 10（进行中）：model-hub 指标接入（model-hub 新增 `GET /metrics`，
+  collector 增 `model-hub:8791`，看板 26 → 30 面板，不可达告警增 `modelhub_up`）；
+  代码与配置已落地，待 model-hub 容器运行后端到端现测。
 
 ## 最近变更 / Recently shipped
 
@@ -58,13 +61,21 @@
   - 门禁：commerce-os 192 tests、growth-os 229 tests；两仓 typecheck/lint/build/
     migration 检查全绿。
   - 修复：按标签拆分面板去掉 `vector(0)` 兜底，避免指标存在时多出空标签 `{} = 0` 序列。
+- **2026-11-27 · 阶段 10 首片（model-hub）**：model-hub 指标接入集中式栈。
+  - model-hub `GET /metrics` 输出 10 个聚合族（`modelhub_*`，含 usage calls/tokens/
+    cost_micros 按 `model × billing_source` 分组 + projects/providers 计数）；端点无鉴权、
+    不暴露 prompt 内容/key/项目 id。
+  - collector 增 `model-hub:8791`；看板新增 4 面板（id 27–30），Trace 下移到 `y=82`；
+    不可达告警增 `modelhub_up` 一个 `absent` 项。
+  - 门禁：model-hub 49 文件 / 425 tests 全绿、typecheck 0、lint 0。
+  - ⬜ 端到端现测待 model-hub 容器在 tier0-net 运行后补（`modelhub_up=1` + 面板取到样本）。
 
 ## 阻塞 / 外部依赖
 
 | 项 | 说明 |
 |---|---|
 | 真实告警 webhook URL | 未定义，属外部凭据/渠道，本地无法完成 |
-| 其余服务指标接入 | 非阻塞，按产品优先级择机跟进 |
+| 其余服务指标接入 | 非阻塞，按产品优先级择机跟进；model-hub 已接（阶段 10 首片），剩 growth-agent / ops-console / agent-ops |
 
 ## 备注
 
