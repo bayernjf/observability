@@ -75,6 +75,14 @@ receivers:
           metrics_path: /metrics
           static_configs:
             - targets: ["ops-console:3022"]
+        # agent-ops (phase 10): daemon runs on the macOS host (no container),
+        # so reach it through OrbStack's host gateway. Requires the daemon to
+        # opt into a wider bind with AGENT_OPS_HOST=0.0.0.0.
+        - job_name: agent-ops
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["host.docker.internal:3737"]
 
 processors:
   batch:
