@@ -68,6 +68,13 @@ receivers:
           metrics_path: /metrics
           static_configs:
             - targets: ["orchestrator:8790"]
+        # ops-console (phase 10): notification delivery ledger counts only.
+        # No decision id, deep link, webhook URL or error text is exported.
+        - job_name: ops-console
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["ops-console:3022"]
 
 processors:
   batch:
