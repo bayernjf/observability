@@ -8,7 +8,7 @@
 <!-- tier0:todos v1 -->
 | id | title | status | priority | owner | next | evidence | updated |
 |---|---|---|---|---|---|---|---|
-| OB-01 | 其余 Tier0 服务指标接入 | open | p2 | self | model-hub 已接入；剩 growth-agent / ops-console / agent-ops 按需跟进 | `observability/handoff.md` | 2026-11-27 |
+| OB-01 | 其余 Tier0 服务指标接入 | open | p2 | self | model-hub / growth-agent 已接入；剩 ops-console / agent-ops 按需跟进 | `observability/handoff.md` | 2026-11-27 |
 | OB-02 | 真实告警渠道 | blocked | p1 | owner | owner 提供飞书/微信/Slack webhook，经 `GRAFANA_ALERT_WEBHOOK_URL` 覆盖 | - | 2026-11-22 |
 <!-- /tier0:todos -->
 
@@ -42,9 +42,9 @@
   看板 13 → 19 面板）；已端到端现测，非配置推断。
 - ✅ 阶段 9：commerce-os + growth-os 指标接入（两仓各新增 `GET /metrics`；
   看板 19 → 26 面板；服务不可达告警增加两项）；已端到端现测，非配置推断。
-- ⬜ 阶段 10（进行中）：model-hub 指标接入（model-hub 新增 `GET /metrics`，
-  collector 增 `model-hub:8791`，看板 26 → 30 面板，不可达告警增 `modelhub_up`）；
-  代码与配置已落地，待 model-hub 容器运行后端到端现测。
+- ⬜ 阶段 10（进行中）：model-hub + growth-agent 指标接入（两仓各新增 `GET /metrics`，
+  collector 增 `model-hub:8791` / `orchestrator:8790`，看板 26 → 34 面板，不可达告警增
+  `modelhub_up` / `growth_agent_up`）；代码与配置已落地，待容器运行后端到端现测。
 
 ## 最近变更 / Recently shipped
 
@@ -69,13 +69,21 @@
     不可达告警增 `modelhub_up` 一个 `absent` 项。
   - 门禁：model-hub 49 文件 / 425 tests 全绿、typecheck 0、lint 0。
   - ⬜ 端到端现测待 model-hub 容器在 tier0-net 运行后补（`modelhub_up=1` + 面板取到样本）。
+- **2026-11-27 · 阶段 10 第二片（growth-agent）**：growth-agent 指标接入集中式栈。
+  - growth-agent `GET /metrics` 输出 14 个聚合族（`growth_agent_*`：任务按 status/type、
+    API 调用与成本按 provider、webhook 按 source×result、channel failure、GSC 快照计数）；
+    端点无鉴权，不暴露 task id / PR ref（仓库 URL）/ decision id / delivery id / 错误文本。
+  - growth-agent compose `orchestrator` 加入 `tier0-net`；collector 增 `orchestrator:8790`；
+    看板新增 4 面板（id 31–34），Trace 下移到 `y=88`；不可达告警增 `growth_agent_up`。
+  - 门禁：growth-agent 49 文件 / 472 tests 全绿、typecheck 0、lint 0、`docker compose config` OK。
+  - ⬜ 端到端现测待 growth-agent 容器在 tier0-net 运行后补（`growth_agent_up=1` + 面板取到样本）。
 
 ## 阻塞 / 外部依赖
 
 | 项 | 说明 |
 |---|---|
 | 真实告警 webhook URL | 未定义，属外部凭据/渠道，本地无法完成 |
-| 其余服务指标接入 | 非阻塞，按产品优先级择机跟进；model-hub 已接（阶段 10 首片），剩 growth-agent / ops-console / agent-ops |
+| 其余服务指标接入 | 非阻塞，按产品优先级择机跟进；model-hub / growth-agent 已接（阶段 10 前两片），剩 ops-console / agent-ops |
 
 ## 备注
 
