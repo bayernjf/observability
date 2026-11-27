@@ -23,8 +23,8 @@ groups:
               from: 300
               to: 0
             model:
-              # agent-world 不吐 `up` 指标（无存活标记），loom/atlas/zeus 各自吐
-              # `up`/`atlas_up`/`zeus_up`。
+              # agent-world 不吐 `up` 指标（无存活标记），loom/atlas/zeus/commerce-os/growth-os/model-hub
+              # 各自吐 `up`/`atlas_up`/`zeus_up`/`commerce_up`/`growth_up`/`modelhub_up`。
               # 用 count() 兜底让表达式在「服务健康」时返回明确的 0 而非空向量
               # （Grafana 11 对空向量的 instant 求值会报 "must be a wide series"）。
               # >0 表示有服务抓取失败。
@@ -47,6 +47,36 @@ groups:
                   +
                   (
                     count(absent(zeus_up))
+                    or vector(0)
+                  )
+                  +
+                  (
+                    count(absent(commerce_up))
+                    or vector(0)
+                  )
+                  +
+                  (
+                    count(absent(growth_up))
+                    or vector(0)
+                  )
+                  +
+                  (
+                    count(absent(modelhub_up))
+                    or vector(0)
+                  )
+                  +
+                  (
+                    count(absent(growth_agent_up))
+                    or vector(0)
+                  )
+                  +
+                  (
+                    count(absent(ops_console_up))
+                    or vector(0)
+                  )
+                  +
+                  (
+                    count(absent(agent_ops_up))
                     or vector(0)
                   )
                   > 0

@@ -7,7 +7,7 @@ OTel 统一可观测性方案（`bayjf/docs/tier0/OTel统一可观测性方案-2
 
 | 容器 | 作用 | 端口（仅 127.0.0.1） |
 |---|---|---|
-| `otel-collector` | 收 OTLP（4317 gRPC / 4318 HTTP）、批处理、scrape 四个 Tier0 服务指标、转发 | 4317 / 4318 |
+| `otel-collector` | 收 OTLP（4317 gRPC / 4318 HTTP）、批处理、scrape 六个 Tier0 服务指标、转发 | 4317 / 4318 |
 | `tempo` | 本地 trace 存储（monolithic，磁盘卷 `tempo-data`，保留 7 天） | 3200 查询 API |
 | `prometheus` | 本地指标后端（scrape collector 的 exporter），磁盘卷 `prometheus-data` | 9090 |
 | `grafana` | 看板（数据源置备指向 Prometheus + Tempo），磁盘卷 `grafana-data` | 3001 |
@@ -149,4 +149,34 @@ cd ~/000mycodes/observability
     面板本来就用聚合形式，无此缺陷。
   - 另记：Grafana **看板**置备每 10s 热加载（`updateIntervalSeconds: 10`），**告警规则**
     置备不热加载，改 `rules.yml` 后必须 `docker compose restart grafana` 才生效。
+- 阶段 9（**2026-11-22 完成**）：commerce-os 与 growth-os 指标接入，补齐交易与增长两个业务面。
+  - **commerce-os 仓**新增 `GET /metrics`（`src/observability/prometheus.ts`）：把
+    `DashboardService.getMetrics()` 的同一份 `DashboardMetrics` 纯投影成 Prometheus
+    文本 0.0.4，不新建第二条记账路径。指标族：`commerce_up`、快照时间戳、
+    `commerce_currency_info`、`commerce_orders{state}`、`commerce_gross_amount{currency}`、
+    `commerce_refunds{state}`、`commerce_refunded_amount{currency}`、
+    `commerce_content_published`、`commerce_net_amount{currency}`。端点挂在 `/api/v1`
+    与 bearer 中间件之外，只输出聚合值，不暴露订单明细。
+  - **growth-os 仓**新增 `GET /metrics`（`src/observability/prometheus.ts` +
+    `src/api/metrics-http.ts`，`Cache-Control: no-store`）：`growth_up`、uptime、
+    快照时间戳、`growth_leads{status}` + total、`growth_lead_followups{state}`、
+    `growth_campaigns`、`growth_outreach_drafts{status}` + total、
+    `growth_research_reports`。标签只到状态枚举；邮箱、主题、正文不会成为 label。
+  - **本仓** collector 增 `commerce-os`（`commerce-os:8787/metrics`）与 `growth-os`
+    （`growth-os:8788/metrics`）两个 scrape job；两仓 compose 的业务服务同时接入
+    `tier0-net`，collector 可直接按服务名抓取。
+  - 看板 19 → **26 面板**，新增 id 20–26：commerce 存活、GMV/净额、订单按状态；
+    growth 存活、线索总数、到期跟进、外联草稿。最近 Trace 面板下移到 `y=76`。
+    「服务不可达」告警在原有四项之外增加 `commerce_up` / `growth_up` 两个 `absent` 项。
+  - **已端到端现测**（2026-11-22，不是配置推断）：重建两个业务容器并重启 collector 后，
+    collector 日志出现 `Scrape job added` 的 `commerce-os` / `growth-os`；Prometheus
+    `up{exported_job="commerce-os"}=1`、`up{exported_job="growth-os"}=1`；
+    `commerce_up=1`、`growth_up=1`；Grafana 置备看板确为 26 面板，新面板查询全部成功：
+    commerce GMV **2697** / 净额 **899**、订单 all=3 / paid=3 / completed=0；
+    growth leads=1 / due=0 / drafts=1。不可达告警表达式求值为 0，active alerts=0。
+  - **本阶段踩到并修掉的坑**：`sum by (state) (commerce_orders) or vector(0)` 在指标
+    存在时会多出一条空标签 `{} = 0` 序列（`vector(0)` 的标签集与按状态聚合的序列不匹配，
+    `or` 不去重），图例会多一条空名线。按标签拆分的面板不能加 `vector(0)` 兜底，已改为
+    `sum by (state) (commerce_orders)`；单值 stat 面板继续用
+    `max(...) or vector(0)` / `sum(...) or vector(0)`。
 - 统一资源属性：`service.name` / 版本 / `deployment.environment=local`。

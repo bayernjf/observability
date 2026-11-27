@@ -39,6 +39,50 @@ receivers:
           metrics_path: /metrics
           static_configs:
             - targets: ["zeus:8787"]
+        # commerce-os (phase 9): aggregate operating metrics from the same
+        # dashboard snapshot that serves /api/v1/dashboard. No order rows or
+        # customer fields are exposed; the endpoint is loopback/tier0-net only.
+        - job_name: commerce-os
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["commerce-os:8787"]
+        # growth-os (phase 9): bounded CRM/outreach counts. Emails and message
+        # bodies never become labels.
+        - job_name: growth-os
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["growth-os:8788"]
+        # model-hub (phase 10): aggregate usage counts by model + billing source.
+        # No prompt content, key material or project id becomes a label.
+        - job_name: model-hub
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["model-hub:8791"]
+        # growth-agent (phase 10): aggregate task/cost/webhook/failure counts.
+        # No task id, PR ref (repo URL), decision id or error text is exported.
+        - job_name: growth-agent
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["orchestrator:8790"]
+        # ops-console (phase 10): notification delivery ledger counts only.
+        # No decision id, deep link, webhook URL or error text is exported.
+        - job_name: ops-console
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["ops-console:3022"]
+        # agent-ops (phase 10): daemon runs on the macOS host (no container),
+        # so reach it through OrbStack's host gateway. Requires the daemon to
+        # opt into a wider bind with AGENT_OPS_HOST=0.0.0.0.
+        - job_name: agent-ops
+          scrape_interval: 15s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["host.docker.internal:3737"]
 
 processors:
   batch:

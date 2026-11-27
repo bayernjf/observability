@@ -3,15 +3,25 @@
 ## 待办登记（标准）
 
 > 本段是本产品唯一活跃待办入口；详细背景见下方原有章节。完成一项改 `[x]`，并在“最近变更 / Recently shipped”留证据。
-> 最近同步：2026-11-19
+> 最近同步：2026-11-22
 
-- [ ] **其余 Tier0 服务指标接入** — 状态：open；commerce-os / growth-os 按需跟进；当前 zeus / agent-world / loom / atlas 已接入。
-- [ ] **真实告警渠道** — 状态：blocked；飞书/微信/Slack bot URL 未定义，当前只到 `scripts/fake-alert-receiver.mjs`；外部确定后经 `GRAFANA_ALERT_WEBHOOK_URL` 覆盖。
+<!-- tier0:todos v1 -->
+| id | title | status | priority | owner | next | evidence | updated |
+|---|---|---|---|---|---|---|---|
+| OB-01 | 其余 Tier0 服务指标接入 | done | p2 | self | model-hub / growth-agent / ops-console / agent-ops / agent-world 五服务均端到端现测：前四者 `*_up=1` 抓到样本；agent-world `runs_total{status="done"}=1` 经 collector 抓到 | `observability/handoff.md` | 2026-11-27 |
+| OB-02 | 真实告警渠道 | blocked | p1 | owner | owner 提供飞书/微信/Slack webhook，经 `GRAFANA_ALERT_WEBHOOK_URL` 覆盖 | - | 2026-11-22 |
+<!-- /tier0:todos -->
+
+### 已完成（历史）
+
+- [x] **commerce-os / growth-os 指标接入** — 2026-11-22 完成；两仓新增 `GET /metrics`，
+  collector 增两个 scrape job，看板 19 → 26 面板，服务不可达告警增两项；已端到端现测。
 
 > 状态主入口。开工前先读；每完成一个工作单元立即更新（已完成划掉、待办保留）。
 > 组件/配置/启动细节以 `README.md` 为权威，本文件只记录交接信息（进度 + 下一步 + 阻塞）。
 
-## Current state（2026-11-19）
+
+## Current state（2026-11-22）
 
 - **仓库**：git 私有 `github.com/bayernjf/observability`，默认分支 main。
 - **形态**：本地可观测性栈（集中式 Grafana），全容器方案为主用、主机二进制 fallback 备用。
@@ -19,7 +29,7 @@
 - **组件**：otel-collector（OTLP + 指标 scrape）、tempo（trace 存储，保留 7 天）、
   prometheus（指标后端）、grafana（看板 + 告警）。
 
-## 阶段进度（1–8 全部闭环，明细见 README）
+## 阶段进度（1–9 全部闭环，明细见 README）
 
 - ✅ 阶段 1：collector + tempo 容器上线，`smoke-test.sh` PASS。
 - ✅ 阶段 2：zeus + agent-world 接 OTLP trace（各仓内联 + 统一 env 契约）。
@@ -30,20 +40,73 @@
 - ✅ 阶段 7：loom + atlas 指标接入；看板 8 → 13 面板；两处 Grafana 11 告警求值坑已修。
 - ✅ 阶段 8：zeus 决策运行时接入（zeus 新增 `GET /metrics` Prometheus 文本面；
   看板 13 → 19 面板）；已端到端现测，非配置推断。
+- ✅ 阶段 9：commerce-os + growth-os 指标接入（两仓各新增 `GET /metrics`；
+  看板 19 → 26 面板；服务不可达告警增加两项）；已端到端现测，非配置推断。
+- ✅ 阶段 10：model-hub + growth-agent + ops-console + agent-ops 指标接入
+  （四仓各新增 `GET /metrics`，collector 增 `model-hub:8791` / `orchestrator:8790` /
+  `ops-console:3022` / `host.docker.internal:3737`，看板 26 → 42 面板，不可达告警增
+  `modelhub_up` / `growth_agent_up` / `ops_console_up` / `agent_ops_up`）；
+  已端到端现测，四个 `*_up` 均抓到样本。
 
-## 待办
+## 最近变更 / Recently shipped
 
-- [ ] 其余 Tier0 服务指标接入：commerce-os / growth-os 按需跟进（当前 zeus / agent-world /
-      loom / atlas 已接入）。
-- [ ] 真实告警渠道：飞书/微信/Slack bot URL 未定义，当前只到 `scripts/fake-alert-receiver.mjs`；
-      外部确定后经 `GRAFANA_ALERT_WEBHOOK_URL` 覆盖即可，规则无需改。
+- **2026-11-22 · 阶段 9 收口**：commerce-os / growth-os 指标接入集中式栈。
+  - commerce-os `GET /metrics` 输出 9 个聚合族；growth-os `GET /metrics` 输出 10 个聚合族；
+    端点均不要求 bearer，且不暴露明细。
+  - collector 增 `commerce-os:8787` / `growth-os:8788`；两仓 compose 服务接入 `tier0-net`。
+  - 看板新增 7 面板（id 20–26），Trace 下移到 `y=76`；不可达告警增
+    `commerce_up` / `growth_up` 两个 `absent` 项。
+  - 证据：`up{exported_job="commerce-os"}=1`、`up{exported_job="growth-os"}=1`；
+    `commerce_up=1`、`growth_up=1`；Grafana 26 面板；新面板查询取到
+    commerce GMV 2697 / 净额 899、growth leads 1 / due 0 / drafts 1；
+    不可达告警表达式 0、active alerts 0。
+  - 门禁：commerce-os 192 tests、growth-os 229 tests；两仓 typecheck/lint/build/
+    migration 检查全绿。
+  - 修复：按标签拆分面板去掉 `vector(0)` 兜底，避免指标存在时多出空标签 `{} = 0` 序列。
+- **2026-11-27 · 阶段 10 首片（model-hub）**：model-hub 指标接入集中式栈。
+  - model-hub `GET /metrics` 输出 10 个聚合族（`modelhub_*`，含 usage calls/tokens/
+    cost_micros 按 `model × billing_source` 分组 + projects/providers 计数）；端点无鉴权、
+    不暴露 prompt 内容/key/项目 id。
+  - collector 增 `model-hub:8791`；看板新增 4 面板（id 27–30），Trace 下移到 `y=82`；
+    不可达告警增 `modelhub_up` 一个 `absent` 项。
+  - 门禁：model-hub 49 文件 / 425 tests 全绿、typecheck 0、lint 0。
+  - ✅ 端到端现测：`modelhub_up{exported_job="model-hub"}=1`，Prometheus 取到样本。
+- **2026-11-27 · 阶段 10 第二片（growth-agent）**：growth-agent 指标接入集中式栈。
+  - growth-agent `GET /metrics` 输出 14 个聚合族（`growth_agent_*`：任务按 status/type、
+    API 调用与成本按 provider、webhook 按 source×result、channel failure、GSC 快照计数）；
+    端点无鉴权，不暴露 task id / PR ref（仓库 URL）/ decision id / delivery id / 错误文本。
+  - growth-agent compose `orchestrator` 加入 `tier0-net`；collector 增 `orchestrator:8790`；
+    看板新增 4 面板（id 31–34），Trace 下移到 `y=88`；不可达告警增 `growth_agent_up`。
+  - 门禁：growth-agent 49 文件 / 472 tests 全绿、typecheck 0、lint 0、`docker compose config` OK。
+  - ✅ 端到端现测：`growth_agent_up{exported_job="growth-agent"}=1`，Prometheus 取到样本。
+- **2026-11-27 · 阶段 10 第三片（ops-console）**：ops-console 指标接入集中式栈。
+  - ops-console `GET /metrics` 输出 5 个聚合族（`ops_console_*`：up/uptime/timestamp +
+    通知投递账本按 event×status 计数 + 总数）；端点免鉴权，不导出 decision id /
+    deep link / webhook URL / error text。
+  - ops-console compose 加入 `tier0-net`；collector 增 `ops-console:3022`；看板新增
+    4 面板（id 35–38），Trace 下移到 `y=94`；不可达告警增 `ops_console_up`。
+  - 门禁：ops-console 38 文件 / 273 tests 全绿、lint 0、`astro check` 0（fnm v22.23.4）、
+    build 通过、`docker compose config` OK。
+  - ✅ 端到端现测：`ops_console_up{exported_job="ops-console"}=1`，Prometheus 取到样本。
+- **2026-11-27 · 阶段 10 第四片（agent-ops）**：agent-ops 指标接入集中式栈。
+  - agent-ops `GET /metrics` 输出聚合族（`agent_ops_*`：任务/运行按 status、返工、
+    usage tokens/cost、按 runtime/role 分组），复用 `KernelStore.getMetrics()` 快照；
+    端点免鉴权，不导出 repo 路径/prompt/内容；`GET /api/metrics` 业务 JSON 保持不变。
+  - agent-ops daemon 新增可选 `AGENT_OPS_HOST`（默认 `127.0.0.1` 保持原安全姿态，
+    接入 collector 时显式设 `0.0.0.0`）；collector 经 `host.docker.internal:3737` 抓取
+    （agent-ops 无容器化，daemon 裸跑 macOS host）；看板新增 4 面板（id 39–42），
+    Trace 下移到 `y=100`；不可达告警增 `agent_ops_up`。
+  - 门禁：agent-ops 70 文件 / 792 tests 全绿、typecheck 0（本仓无 lint script）。
+  - ✅ 端到端现测：daemon 以 `AGENT_OPS_HOST=0.0.0.0` 起后
+    `agent_ops_up{exported_job="agent-ops"}=1`，Prometheus 经 `host.docker.internal:3737`
+    取到样本；验证后已停 daemon（未留后台进程）。
 
 ## 阻塞 / 外部依赖
 
 | 项 | 说明 |
 |---|---|
 | 真实告警 webhook URL | 未定义，属外部凭据/渠道，本地无法完成 |
-| 服务指标接入的下一步 | 非阻塞，按产品优先级择机跟进 |
+| 其余服务指标接入 | 非阻塞；model-hub / growth-agent / ops-console / agent-ops 四服务均已接入并端到端现测（阶段 10） |
 
 ## 备注
 
