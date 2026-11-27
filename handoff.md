@@ -8,7 +8,7 @@
 <!-- tier0:todos v1 -->
 | id | title | status | priority | owner | next | evidence | updated |
 |---|---|---|---|---|---|---|---|
-| OB-01 | 其余 Tier0 服务指标接入 | done | p2 | self | model-hub / growth-agent / ops-console / agent-ops 四服务均已接入并端到端现测（`*_up=1` 抓取到样本） | `observability/handoff.md` | 2026-11-27 |
+| OB-01 | 其余 Tier0 服务指标接入 | done | p2 | self | model-hub / growth-agent / ops-console / agent-ops / agent-world 五服务均端到端现测：前四者 `*_up=1` 抓到样本；agent-world `runs_total{status="done"}=1` 经 collector 抓到 | `observability/handoff.md` | 2026-11-27 |
 | OB-02 | 真实告警渠道 | blocked | p1 | owner | owner 提供飞书/微信/Slack webhook，经 `GRAFANA_ALERT_WEBHOOK_URL` 覆盖 | - | 2026-11-22 |
 <!-- /tier0:todos -->
 
